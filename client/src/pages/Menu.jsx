@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { getMenu } from '@/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -116,8 +117,8 @@ const Menu = () => {
                                     }
                                 }}
                                 className={`rounded-full px-5 py-2 text-sm font-semibold transition-all duration-300 ${activeSection === `section-${section.id}`
-                                    ? 'bg-orange-600 text-white shadow-md transform scale-105'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-orange-50 hover:text-orange-600'
+                                        ? 'bg-orange-600 text-white shadow-md transform scale-105'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-orange-50 hover:text-orange-600'
                                     }`}
                             >
                                 {section.name}
