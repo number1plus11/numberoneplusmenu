@@ -2,13 +2,14 @@
 import { useEffect, useState } from 'react';
 import { getMenu } from '@/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Search } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp } from 'lucide-react';
 
 const Menu = () => {
     const [menuData, setMenuData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeSection, setActiveSection] = useState('');
+    const [expandedItems, setExpandedItems] = useState({});
 
     useEffect(() => {
         const fetchMenu = async () => {
@@ -24,6 +25,16 @@ const Menu = () => {
 
         fetchMenu();
     }, []);
+
+    // Toggle expand for an item
+    const toggleExpand = (itemId) => {
+        setExpandedItems(prev => ({
+            ...prev,
+            [itemId]: !prev[itemId]
+        }));
+    };
+
+    // ... scroll spy ...
 
     // Scroll spy to highlight active section
     useEffect(() => {
@@ -150,57 +161,72 @@ const Menu = () => {
                             </div>
 
                             <div className="grid grid-cols-2 gap-3 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                                {section.items.map((item) => (
-                                    <Card key={item.id} className="group overflow-hidden border-transparent hover:border-orange-100 hover:shadow-xl transition-all duration-300 bg-white flex flex-col h-full rounded-xl">
-                                        <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
-                                            {item.image_url ? (
-                                                <img
-                                                    src={item.image_url}
-                                                    alt={item.name}
-                                                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                                    loading="lazy"
-                                                />
-                                            ) : (
-                                                <div className="flex h-full w-full items-center justify-center text-slate-300">
-                                                    <span className="text-xs font-medium">No Image</span>
+                                {section.items.map((item) => {
+                                    const isExpanded = !!expandedItems[item.id];
+                                    return (
+                                        <Card
+                                            key={item.id}
+                                            onClick={() => toggleExpand(item.id)}
+                                            className={`group overflow-hidden border-transparent hover:border-orange-100 hover:shadow-xl transition-all duration-300 bg-white flex flex-col h-full rounded-xl cursor-pointer ${isExpanded ? 'ring-2 ring-orange-100' : ''}`}
+                                        >
+                                            <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
+                                                {item.image_url ? (
+                                                    <img
+                                                        src={item.image_url}
+                                                        alt={item.name}
+                                                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                                        loading="lazy"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-full w-full items-center justify-center text-slate-300">
+                                                        <span className="text-xs font-medium">No Image</span>
+                                                    </div>
+                                                )}
+                                                <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-white/90 backdrop-blur rounded text-xs font-bold text-orange-600 shadow-sm sm:top-2 sm:right-2 sm:px-2 sm:py-1 sm:text-sm">
+                                                    {item.price} DT
                                                 </div>
-                                            )}
-                                            <div className="absolute top-1 right-1 px-1.5 py-0.5 bg-white/90 backdrop-blur rounded text-xs font-bold text-orange-600 shadow-sm sm:top-2 sm:right-2 sm:px-2 sm:py-1 sm:text-sm">
-                                                {item.price} DT
+                                                {!item.available && (
+                                                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-[2px]">
+                                                        <span className="px-2 py-0.5 bg-red-600 text-white text-[10px] sm:text-sm font-bold rounded-full transform -rotate-6">SOLD OUT</span>
+                                                    </div>
+                                                )}
                                             </div>
-                                            {!item.available && (
-                                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-[2px]">
-                                                    <span className="px-2 py-0.5 bg-red-600 text-white text-[10px] sm:text-sm font-bold rounded-full transform -rotate-6">SOLD OUT</span>
-                                                </div>
-                                            )}
-                                        </div>
 
-                                        <CardHeader className="p-2 sm:p-4 pb-0 sm:pb-2">
-                                            <CardTitle className="text-sm sm:text-lg font-bold text-slate-800 leading-tight group-hover:text-orange-600 transition-colors line-clamp-2">
-                                                {item.name}
-                                            </CardTitle>
-                                        </CardHeader>
+                                            <CardHeader className="p-2 sm:p-4 pb-0 sm:pb-2 flex flex-row justify-between items-start gap-2">
+                                                <CardTitle className="text-sm sm:text-lg font-bold text-slate-800 leading-tight group-hover:text-orange-600 transition-colors">
+                                                    {item.name}
+                                                </CardTitle>
+                                                {isExpanded ? <ChevronUp size={20} className="text-orange-400 shrink-0" /> : <ChevronDown size={20} className="text-slate-300 shrink-0" />}
+                                            </CardHeader>
 
-                                        <CardContent className="p-2 sm:p-4 pt-0 flex-1 flex flex-col">
-                                            <p className="text-[10px] sm:text-sm text-slate-500 line-clamp-2 mb-2 flex-1">{item.description}</p>
+                                            <CardContent className="p-2 sm:p-4 pt-0 flex-1 flex flex-col">
+                                                <p className={`text-[10px] sm:text-sm text-slate-500 mb-2 flex-1 ${isExpanded ? '' : 'line-clamp-2'}`}>
+                                                    {item.description}
+                                                </p>
 
-                                            {Array.isArray(item.options) && item.options.length > 0 && (
-                                                <div className="mt-auto pt-2 border-t border-slate-50 space-y-1 hidden sm:block">
-                                                    {item.options.map((group, idx) => (
-                                                        <div key={idx} className="text-xs flex flex-wrap gap-1">
-                                                            <span className="font-semibold text-slate-700">{group.name}: </span>
-                                                            <span className="text-slate-500">
-                                                                {Array.isArray(group.choices) && group.choices.map(c =>
-                                                                    c.name + (c.price > 0 ? ` (+${c.price})` : '')
-                                                                ).join(', ')}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </CardContent>
-                                    </Card>
-                                ))}
+                                                {/* Options: Show if expanded OR on desktop (original behavior) -> Changed: now hide on desktop too unless expanded for consistency? Or keep desktop visible? 
+                                                    User requested "expand to show more", implies it is hidden. 
+                                                    Let's hide options by default on ALL screens to be consistent, or keep desktop visible?
+                                                    The user said "expand to show more". I'll hide options by default everywhere for a cleaner look. 
+                                                */}
+                                                {Array.isArray(item.options) && item.options.length > 0 && (
+                                                    <div className={`mt-auto pt-2 border-t border-slate-50 space-y-1 transition-all duration-300 ${isExpanded ? 'block' : 'hidden'}`}>
+                                                        {item.options.map((group, idx) => (
+                                                            <div key={idx} className="text-xs flex flex-wrap gap-1">
+                                                                <span className="font-semibold text-slate-700">{group.name}: </span>
+                                                                <span className="text-slate-500">
+                                                                    {Array.isArray(group.choices) && group.choices.map(c =>
+                                                                        c.name + (c.price > 0 ? ` (+${c.price})` : '')
+                                                                    ).join(', ')}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
                             </div>
                         </section>
                     ))
