@@ -49,7 +49,7 @@ if (isPostgres) {
                 name TEXT NOT NULL UNIQUE
             )`);
             /*
-                        // Seed Initial Data if empty
+                        // Seeding Initial Data if empty
                         const res = await client.query('SELECT count(*) FROM sections');
                         if (parseInt(res.rows[0].count) === 0) {
                             console.log("Seeding initial data...");
@@ -58,7 +58,7 @@ if (isPostgres) {
                                 await client.query('INSERT INTO sections (name, display_order) VALUES ($1, $2)', [sections[i], i]);
                             }
                         }
-            */
+            **/
             console.log("Database initialized successfully.");
         } catch (e) {
             console.error("Error initializing database:", e);
