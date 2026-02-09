@@ -272,6 +272,28 @@ app.post('/api/import', authenticateToken, async (req, res) => {
 
         const results = { sections: 0, items: 0, errors: [] };
 
+        // 0. Populate Standard Names Library first
+        const allNames = new Set();
+        sections.forEach(s => {
+            if (Array.isArray(s.items)) {
+                s.items.forEach(i => {
+                    if (i.name) allNames.add(i.name);
+                });
+            }
+        });
+
+        for (const name of allNames) {
+            // Best effort insert to library
+            await new Promise(resolve => {
+                // Postgres: ON CONFLICT DO NOTHING
+                // SQLite: INSERT OR IGNORE
+                // We'll try generic INSERT and ignore unique constraint error
+                db.run("INSERT INTO standard_names (name) VALUES (?)", [name], (err) => {
+                    resolve(); // Ignore error (likely duplicate)
+                });
+            });
+        }
+
         for (const sectionData of sections) {
             // 1. Create Section
             try {
