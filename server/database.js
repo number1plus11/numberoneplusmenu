@@ -130,7 +130,8 @@ if (isPostgres) {
             dbReady.then(() => {
                 if (callback) callback();
             });
-        }
+        },
+        init: initPostgres
     };
 
 } else {
