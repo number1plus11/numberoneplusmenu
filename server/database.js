@@ -32,6 +32,8 @@ if (isPostgres) {
             const isInsert = /^\s*INSERT/i.test(pgSql);
             const finalSql = isInsert ? `${pgSql} RETURNING id` : pgSql;
 
+            console.log("Executing SQL:", finalSql, params); // Debug Log
+
             pool.query(finalSql, params)
                 .then(res => {
                     const context = {
@@ -41,6 +43,7 @@ if (isPostgres) {
                     if (callback) callback.call(context, null);
                 })
                 .catch(err => {
+                    console.error("SQL Error:", err); // Debug Log
                     if (callback) callback(err);
                 });
         },
