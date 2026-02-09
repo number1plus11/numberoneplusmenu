@@ -194,25 +194,7 @@ app.put('/api/items/:id', authenticateToken, upload.single('image'), (req, res) 
 
 // Delete Item (Protected)
 app.delete('/api/items/:id', authenticateToken, (req, res) => {
-    db.run("DELETE FROM items WHERE id = ?", req.params.id, function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "Deleted", changes: this.changes });
-    });
-});
-
-// Update Section (Protected)
-app.put('/api/sections/:id', authenticateToken, (req, res) => {
-    const { name } = req.body;
-    db.run("UPDATE sections SET name = ? WHERE id = ?", [name, req.params.id], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "Updated", changes: this.changes });
-    });
-});
-
-// Delete Section (Protected)
-app.delete('/api/sections/:id', authenticateToken, (req, res) => {
-    // Optional: Delete items in section first or use cascade if enforced
-    db.run("DELETE FROM sections WHERE id = ?", req.params.id, function (err) {
+    db.run("DELETE FROM items WHERE id = ?", [req.params.id], function (err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ message: "Deleted", changes: this.changes });
     });
