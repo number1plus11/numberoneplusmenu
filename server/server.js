@@ -288,6 +288,25 @@ app.use((err, req, res, next) => {
     next();
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+// Manual DB Init (for debugging)
+app.get('/api/debug/init-db', async (req, res) => {
+    try {
+        if (db.init) {
+            await db.init();
+            res.send("Database initialization triggered manually. Check logs.");
+        } else {
+            res.send("Not running in Postgres mode or init not exposed.");
+        }
+    } catch (e) {
+        res.status(500).send("Error: " + e.message);
+    }
 });
+
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+        console.log("Server starting... v2 (Multer & DB fixes)");
+    });
+}
+
+module.exports = app;
