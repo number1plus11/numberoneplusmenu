@@ -310,329 +310,390 @@ const Admin = () => {
     }
 
 
+    // Bulk Import State
+    const [isImporting, setIsImporting] = useState(false);
+    const [jsonInput, setJsonInput] = useState('');
+    const [importStatus, setImportStatus] = useState('');
+
+    const handleImport = async () => {
+        try {
+            setImportStatus('Importing...');
+            const data = JSON.parse(jsonInput);
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_URL}/import`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                setImportStatus(`Success! Imported ${result.results.sections} sections and ${result.results.item} items.`);
+                // trigger refresh if possible, or just alert
+                // fetchSections(); // Trying to call this if it exists in scope
+                window.location.reload(); // Simple brute force refresh to show new data
+                setJsonInput('');
+            } else {
+                const err = await response.json();
+                setImportStatus('Error: ' + err.error);
+            }
+        } catch (e) {
+            setImportStatus('Invalid JSON: ' + e.message);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-slate-50 p-6">
             <div className="mx-auto max-w-6xl">
-                {/* Header */}
-                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <h1 className="text-3xl font-bold text-slate-900">NumberOne Plus Admin</h1>
-                    <div className="flex gap-4">
-                        <Link to="/">
-                            <Button variant="outline" className="gap-2 w-full sm:w-auto">
-                                <ArrowLeft size={16} /> Public Menu
-                            </Button>
-                        </Link>
-                        <Button variant="secondary" onClick={handleLogout} className="w-full sm:w-auto">
-                            Logout
-                        </Button>
-                    </div>
+                {/* Import Section */}
+            </button>
+
+            {isImporting && (
+                <div style={{ marginTop: '10px' }}>
+                    <textarea
+                        rows="10"
+                        style={{ width: '100%', fontFamily: 'monospace' }}
+                        placeholder='Example: [{"name":"Drinks", "items":[{"name":"Coke", "price":2}]}]'
+                        value={jsonInput}
+                        onChange={(e) => setJsonInput(e.target.value)}
+                    />
+                    <br />
+                    <button onClick={handleImport} style={{ marginTop: '5px', backgroundColor: '#4CAF50', color: 'white' }}>
+                        Import Data
+                    </button>
+                    {importStatus && <p><strong>{importStatus}</strong></p>}
                 </div>
+            )}
+        </div>
 
-                {/* Tabs */}
-                <div className="mb-6 flex space-x-2 border-b border-slate-200 overflow-x-auto">
-                    <button
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'items' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                        onClick={() => setActiveTab('items')}
-                    >
-                        Menu Items
-                    </button>
-                    <button
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'names' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                        onClick={() => setActiveTab('names')}
-                    >
-                        Item Names Library
-                    </button>
-                    <button
-                        className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'sections' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                        onClick={() => setActiveTab('sections')}
-                    >
-                        Sections
-                    </button>
-                </div>
+                {/* Header */ }
+    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-3xl font-bold text-slate-900">NumberOne Plus Admin</h1>
+        <div className="flex gap-4">
+            <Link to="/">
+                <Button variant="outline" className="gap-2 w-full sm:w-auto">
+                    <ArrowLeft size={16} /> Public Menu
+                </Button>
+            </Link>
+            <Button variant="secondary" onClick={handleLogout} className="w-full sm:w-auto">
+                Logout
+            </Button>
+        </div>
+    </div>
 
-                {/* Sections Tab Content */}
-                {activeTab === 'sections' && (
-                    <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 max-w-4xl mx-auto">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Add New Section</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <form onSubmit={handleAddSection} className="flex gap-2">
-                                    <Input
-                                        placeholder="Section Name"
-                                        value={newSectionName}
-                                        onChange={(e) => setNewSectionName(e.target.value)}
-                                        className="flex-1"
-                                    />
-                                    <Button type="submit" size="icon" variant="primary"><Plus size={20} /></Button>
-                                </form>
-                            </CardContent>
-                        </Card>
+    {/* Tabs */ }
+    <div className="mb-6 flex space-x-2 border-b border-slate-200 overflow-x-auto">
+        <button
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'items' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setActiveTab('items')}
+        >
+            Menu Items
+        </button>
+        <button
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'names' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setActiveTab('names')}
+        >
+            Item Names Library
+        </button>
+        <button
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'sections' ? 'border-orange-600 text-orange-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            onClick={() => setActiveTab('sections')}
+        >
+            Sections
+        </button>
+    </div>
 
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Manage Sections</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2 max-h-[600px] overflow-y-auto">
-                                {sections.map(section => (
-                                    <div key={section.id} className="flex items-center justify-between bg-slate-50 p-3 rounded border border-slate-100">
-                                        <span className="text-sm font-medium text-slate-700 truncate">{section.name}</span>
-                                        <div className="flex gap-1">
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => handleUpdateSection(section.id, section.name)}>
-                                                <Pencil size={16} />
-                                            </Button>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500 hover:text-red-500" onClick={() => handleDeleteSection(section.id)}>
-                                                <Trash2 size={16} />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </CardContent>
-                        </Card>
-                    </div>
-                )}
+    {/* Sections Tab Content */ }
+    {
+        activeTab === 'sections' && (
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 max-w-4xl mx-auto">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Add New Section</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleAddSection} className="flex gap-2">
+                            <Input
+                                placeholder="Section Name"
+                                value={newSectionName}
+                                onChange={(e) => setNewSectionName(e.target.value)}
+                                className="flex-1"
+                            />
+                            <Button type="submit" size="icon" variant="primary"><Plus size={20} /></Button>
+                        </form>
+                    </CardContent>
+                </Card>
 
-                {/* Names Tab Content */}
-                {activeTab === 'names' && (
-                    <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 max-w-4xl mx-auto">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Add New Item Name</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <form onSubmit={handleAddStandardName} className="flex gap-2">
-                                    <Input
-                                        placeholder="Item Name (e.g. Cheese Burger)"
-                                        value={newStandardName}
-                                        onChange={(e) => setNewStandardName(e.target.value)}
-                                        className="flex-1"
-                                    />
-                                    <Button type="submit" size="icon" variant="primary"><Plus size={20} /></Button>
-                                </form>
-                            </CardContent>
-                        </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Manage Sections</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 max-h-[600px] overflow-y-auto">
+                        {sections.map(section => (
+                            <div key={section.id} className="flex items-center justify-between bg-slate-50 p-3 rounded border border-slate-100">
+                                <span className="text-sm font-medium text-slate-700 truncate">{section.name}</span>
+                                <div className="flex gap-1">
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => handleUpdateSection(section.id, section.name)}>
+                                        <Pencil size={16} />
+                                    </Button>
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500 hover:text-red-500" onClick={() => handleDeleteSection(section.id)}>
+                                        <Trash2 size={16} />
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
 
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Manage Names Library</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2 max-h-[600px] overflow-y-auto">
-                                {standardNames.map(sn => (
-                                    <div key={sn.id} className="flex items-center justify-between bg-slate-50 p-3 rounded border border-slate-100">
-                                        <span className="text-sm font-medium text-slate-700 truncate">{sn.name}</span>
-                                        <div className="flex gap-1">
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => handleUpdateStandardName(sn.id, sn.name)}>
-                                                <Pencil size={16} />
-                                            </Button>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500 hover:text-red-500" onClick={() => handleDeleteStandardName(sn.id)}>
-                                                <Trash2 size={16} />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </CardContent>
-                        </Card>
-                    </div>
-                )}
+    {/* Names Tab Content */ }
+    {
+        activeTab === 'names' && (
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2 max-w-4xl mx-auto">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Add New Item Name</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleAddStandardName} className="flex gap-2">
+                            <Input
+                                placeholder="Item Name (e.g. Cheese Burger)"
+                                value={newStandardName}
+                                onChange={(e) => setNewStandardName(e.target.value)}
+                                className="flex-1"
+                            />
+                            <Button type="submit" size="icon" variant="primary"><Plus size={20} /></Button>
+                        </form>
+                    </CardContent>
+                </Card>
 
-                {/* Items Tab Content */}
-                {activeTab === 'items' && (
-                    <div className="grid gap-8 lg:grid-cols-3">
-                        {/* Left: Add/Edit Item Form */}
-                        <div className="space-y-8 lg:col-span-1">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>{editingItemId ? 'Edit Item' : 'Add New Item'}</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <form onSubmit={handleFormSubmit} className="space-y-4">
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium">Section</label>
-                                            <select
-                                                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                                value={newItem.section_id}
-                                                onChange={(e) => setNewItem({ ...newItem, section_id: e.target.value })}
-                                            >
-                                                <option value="" disabled>Select Section</option>
-                                                {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium">Name</label>
-                                            <select
-                                                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                                value={newItem.name}
-                                                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                                            >
-                                                <option value="" disabled>Select Name from Library</option>
-                                                {/* If editing and name is not in list (custom legacy name), show it as option */}
-                                                {newItem.name && !standardNames.some(sn => sn.name === newItem.name) && (
-                                                    <option value={newItem.name}>{newItem.name} (Custom)</option>
-                                                )}
-                                                {standardNames.map(sn => <option key={sn.id} value={sn.name}>{sn.name}</option>)}
-                                            </select>
-                                            {/* Fallback for typing new name if needed? User requested list selection. */}
-                                        </div>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Manage Names Library</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 max-h-[600px] overflow-y-auto">
+                        {standardNames.map(sn => (
+                            <div key={sn.id} className="flex items-center justify-between bg-slate-50 p-3 rounded border border-slate-100">
+                                <span className="text-sm font-medium text-slate-700 truncate">{sn.name}</span>
+                                <div className="flex gap-1">
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => handleUpdateStandardName(sn.id, sn.name)}>
+                                        <Pencil size={16} />
+                                    </Button>
+                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-500 hover:text-red-500" onClick={() => handleDeleteStandardName(sn.id)}>
+                                        <Trash2 size={16} />
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
+    {/* Items Tab Content */ }
+    {
+        activeTab === 'items' && (
+            <div className="grid gap-8 lg:grid-cols-3">
+                {/* Left: Add/Edit Item Form */}
+                <div className="space-y-8 lg:col-span-1">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>{editingItemId ? 'Edit Item' : 'Add New Item'}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleFormSubmit} className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Section</label>
+                                    <select
+                                        className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                        value={newItem.section_id}
+                                        onChange={(e) => setNewItem({ ...newItem, section_id: e.target.value })}
+                                    >
+                                        <option value="" disabled>Select Section</option>
+                                        {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Name</label>
+                                    <select
+                                        className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                        value={newItem.name}
+                                        onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                                    >
+                                        <option value="" disabled>Select Name from Library</option>
+                                        {/* If editing and name is not in list (custom legacy name), show it as option */}
+                                        {newItem.name && !standardNames.some(sn => sn.name === newItem.name) && (
+                                            <option value={newItem.name}>{newItem.name} (Custom)</option>
+                                        )}
+                                        {standardNames.map(sn => <option key={sn.id} value={sn.name}>{sn.name}</option>)}
+                                    </select>
+                                    {/* Fallback for typing new name if needed? User requested list selection. */}
+                                </div>
+                                <Input
+                                    label="Price" type="number" step="0.01"
+                                    value={newItem.price}
+                                    onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+                                />
+                                <Input
+                                    label="Description"
+                                    value={newItem.description}
+                                    onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                                />
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Image</label>
+                                    <div className="flex flex-col gap-2">
                                         <Input
-                                            label="Price" type="number" step="0.01"
-                                            value={newItem.price}
-                                            onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => setNewItem({ ...newItem, imageFile: e.target.files[0] })}
+                                            className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                                         />
+                                        <span className="text-xs text-slate-400">Or use URL manually:</span>
                                         <Input
-                                            label="Description"
-                                            value={newItem.description}
-                                            onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                                            placeholder="Image URL (optional)"
+                                            value={newItem.image_url}
+                                            onChange={(e) => setNewItem({ ...newItem, image_url: e.target.value })}
                                         />
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium">Image</label>
-                                            <div className="flex flex-col gap-2">
-                                                <Input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={(e) => setNewItem({ ...newItem, imageFile: e.target.files[0] })}
-                                                    className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
-                                                />
-                                                <span className="text-xs text-slate-400">Or use URL manually:</span>
-                                                <Input
-                                                    placeholder="Image URL (optional)"
-                                                    value={newItem.image_url}
-                                                    onChange={(e) => setNewItem({ ...newItem, image_url: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
+                                    </div>
+                                </div>
 
-                                        {/* Options UI */}
-                                        <div className="border-t pt-4">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <span className="text-sm font-medium">Options / Variants</span>
-                                                <Button type="button" size="sm" variant="secondary" onClick={addOptionGroup} className="text-xs">+ Group</Button>
-                                            </div>
-                                            <div className="space-y-4 max-h-60 overflow-y-auto pr-1">
-                                                {newItem.options.map((group, gIndex) => (
-                                                    <div key={gIndex} className="bg-slate-50 p-3 rounded-lg border text-sm space-y-2">
-                                                        <div className="flex gap-2 items-center">
+                                {/* Options UI */}
+                                <div className="border-t pt-4">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-sm font-medium">Options / Variants</span>
+                                        <Button type="button" size="sm" variant="secondary" onClick={addOptionGroup} className="text-xs">+ Group</Button>
+                                    </div>
+                                    <div className="space-y-4 max-h-60 overflow-y-auto pr-1">
+                                        {newItem.options.map((group, gIndex) => (
+                                            <div key={gIndex} className="bg-slate-50 p-3 rounded-lg border text-sm space-y-2">
+                                                <div className="flex gap-2 items-center">
+                                                    <Input
+                                                        placeholder="Group (e.g. Size)"
+                                                        value={group.name}
+                                                        onChange={(e) => updateOptionGroupName(gIndex, e.target.value)}
+                                                        className="h-8 flex-1"
+                                                    />
+                                                    <Button type="button" size="icon" variant="ghost" onClick={() => removeOptionGroup(gIndex)} className="text-red-500 h-8 w-8">
+                                                        <Trash2 size={14} />
+                                                    </Button>
+                                                </div>
+                                                <div className="pl-2 space-y-2 border-l-2 border-slate-200">
+                                                    {group.choices.map((choice, cIndex) => (
+                                                        <div key={cIndex} className="flex gap-2 items-center">
                                                             <Input
-                                                                placeholder="Group (e.g. Size)"
-                                                                value={group.name}
-                                                                onChange={(e) => updateOptionGroupName(gIndex, e.target.value)}
-                                                                className="h-8 flex-1"
+                                                                placeholder="Choice"
+                                                                value={choice.name}
+                                                                onChange={(e) => updateChoice(gIndex, cIndex, 'name', e.target.value)}
+                                                                className="h-7 flex-1"
                                                             />
-                                                            <Button type="button" size="icon" variant="ghost" onClick={() => removeOptionGroup(gIndex)} className="text-red-500 h-8 w-8">
-                                                                <Trash2 size={14} />
+                                                            <Input
+                                                                type="number"
+                                                                placeholder="+DT"
+                                                                value={choice.price}
+                                                                onChange={(e) => updateChoice(gIndex, cIndex, 'price', e.target.value)}
+                                                                className="h-7 w-16 text-right"
+                                                            />
+                                                            <Button type="button" size="icon" variant="ghost" onClick={() => removeChoice(gIndex, cIndex)} className="text-slate-400 h-7 w-7">
+                                                                &times;
                                                             </Button>
                                                         </div>
-                                                        <div className="pl-2 space-y-2 border-l-2 border-slate-200">
-                                                            {group.choices.map((choice, cIndex) => (
-                                                                <div key={cIndex} className="flex gap-2 items-center">
-                                                                    <Input
-                                                                        placeholder="Choice"
-                                                                        value={choice.name}
-                                                                        onChange={(e) => updateChoice(gIndex, cIndex, 'name', e.target.value)}
-                                                                        className="h-7 flex-1"
-                                                                    />
-                                                                    <Input
-                                                                        type="number"
-                                                                        placeholder="+DT"
-                                                                        value={choice.price}
-                                                                        onChange={(e) => updateChoice(gIndex, cIndex, 'price', e.target.value)}
-                                                                        className="h-7 w-16 text-right"
-                                                                    />
-                                                                    <Button type="button" size="icon" variant="ghost" onClick={() => removeChoice(gIndex, cIndex)} className="text-slate-400 h-7 w-7">
-                                                                        &times;
-                                                                    </Button>
-                                                                </div>
-                                                            ))}
-                                                            <Button type="button" size="sm" variant="ghost" onClick={() => addChoice(gIndex)} className="text-xs text-orange-600 h-6">
-                                                                + Add Choice
-                                                            </Button>
+                                                    ))}
+                                                    <Button type="button" size="sm" variant="ghost" onClick={() => addChoice(gIndex)} className="text-xs text-orange-600 h-6">
+                                                        + Add Choice
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <Button type="submit" className="flex-1">{editingItemId ? 'Update Item' : 'Add Item'}</Button>
+                                    {editingItemId && (
+                                        <Button type="button" variant="secondary" onClick={() => resetForm()}>Cancel</Button>
+                                    )}
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Right: Items List */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Filter */}
+                    <div className="flex items-center gap-2 bg-white p-3 rounded-lg border border-slate-200">
+                        <span className="text-sm font-medium text-slate-600">Filter by Section:</span>
+                        <select
+                            className="rounded-md border border-slate-200 bg-white px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            value={filterSectionId}
+                            onChange={(e) => setFilterSectionId(e.target.value)}
+                        >
+                            <option value="all">All Sections</option>
+                            {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                    </div>
+
+                    {menuData
+                        .filter(section => filterSectionId === 'all' || section.id === parseInt(filterSectionId))
+                        .map((section) => (
+                            <div key={section.id} className="space-y-4">
+                                <h3 className="text-xl font-bold text-slate-700 border-b pb-2">{section.name}</h3>
+                                {section.items.length === 0 ? <p className="text-sm text-slate-400 italic">No items in this section.</p> : (
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        {section.items.map((item) => (
+                                            <Card key={item.id} className="flex flex-row overflow-hidden h-32">
+                                                <div className="w-24 bg-slate-100 shrink-0">
+                                                    {item.image_url && <img src={item.image_url} className="h-full w-full object-cover" alt="" />}
+                                                </div>
+                                                <div className="flex-1 p-3 flex flex-col justify-between">
+                                                    <div className="flex justify-between items-start">
+                                                        <span className="font-semibold text-slate-900 line-clamp-1">{item.name}</span>
+                                                        <div className="flex flex-col items-end">
+                                                            <span className="text-orange-600 font-bold text-sm">{item.price} DT</span>
+                                                            {!item.available && <span className="text-xs text-red-500 font-bold">Sold Out</span>}
                                                         </div>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex gap-2">
-                                            <Button type="submit" className="flex-1">{editingItemId ? 'Update Item' : 'Add Item'}</Button>
-                                            {editingItemId && (
-                                                <Button type="button" variant="secondary" onClick={() => resetForm()}>Cancel</Button>
-                                            )}
-                                        </div>
-                                    </form>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        {/* Right: Items List */}
-                        <div className="lg:col-span-2 space-y-6">
-                            {/* Filter */}
-                            <div className="flex items-center gap-2 bg-white p-3 rounded-lg border border-slate-200">
-                                <span className="text-sm font-medium text-slate-600">Filter by Section:</span>
-                                <select
-                                    className="rounded-md border border-slate-200 bg-white px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                    value={filterSectionId}
-                                    onChange={(e) => setFilterSectionId(e.target.value)}
-                                >
-                                    <option value="all">All Sections</option>
-                                    {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                </select>
-                            </div>
-
-                            {menuData
-                                .filter(section => filterSectionId === 'all' || section.id === parseInt(filterSectionId))
-                                .map((section) => (
-                                    <div key={section.id} className="space-y-4">
-                                        <h3 className="text-xl font-bold text-slate-700 border-b pb-2">{section.name}</h3>
-                                        {section.items.length === 0 ? <p className="text-sm text-slate-400 italic">No items in this section.</p> : (
-                                            <div className="grid gap-4 sm:grid-cols-2">
-                                                {section.items.map((item) => (
-                                                    <Card key={item.id} className="flex flex-row overflow-hidden h-32">
-                                                        <div className="w-24 bg-slate-100 shrink-0">
-                                                            {item.image_url && <img src={item.image_url} className="h-full w-full object-cover" alt="" />}
+                                                    <div className="flex-1 py-1">
+                                                        <p className="text-xs text-slate-500 line-clamp-1">{item.description}</p>
+                                                        {Array.isArray(item.options) && item.options.length > 0 && (
+                                                            <div className="mt-1 flex flex-wrap gap-1">
+                                                                {item.options.map(o => (
+                                                                    <span key={o.name} className="text-[10px] bg-slate-100 px-1 rounded text-slate-600 border border-slate-200">
+                                                                        {o.name}: {Array.isArray(o.choices) ? o.choices.length : 0}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex justify-end">
+                                                        <div className="flex justify-end gap-1">
+                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500" onClick={() => handleEditItem(item, section.id)}>
+                                                                <Pencil size={16} />
+                                                            </Button>
+                                                            <button onClick={() => handleDeleteItem(item.id)} className="text-red-400 hover:text-red-600 p-1">
+                                                                <Trash2 size={16} />
+                                                            </button>
                                                         </div>
-                                                        <div className="flex-1 p-3 flex flex-col justify-between">
-                                                            <div className="flex justify-between items-start">
-                                                                <span className="font-semibold text-slate-900 line-clamp-1">{item.name}</span>
-                                                                <div className="flex flex-col items-end">
-                                                                    <span className="text-orange-600 font-bold text-sm">{item.price} DT</span>
-                                                                    {!item.available && <span className="text-xs text-red-500 font-bold">Sold Out</span>}
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex-1 py-1">
-                                                                <p className="text-xs text-slate-500 line-clamp-1">{item.description}</p>
-                                                                {Array.isArray(item.options) && item.options.length > 0 && (
-                                                                    <div className="mt-1 flex flex-wrap gap-1">
-                                                                        {item.options.map(o => (
-                                                                            <span key={o.name} className="text-[10px] bg-slate-100 px-1 rounded text-slate-600 border border-slate-200">
-                                                                                {o.name}: {Array.isArray(o.choices) ? o.choices.length : 0}
-                                                                            </span>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <div className="flex justify-end">
-                                                                <div className="flex justify-end gap-1">
-                                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-500" onClick={() => handleEditItem(item, section.id)}>
-                                                                        <Pencil size={16} />
-                                                                    </Button>
-                                                                    <button onClick={() => handleDeleteItem(item.id)} className="text-red-400 hover:text-red-600 p-1">
-                                                                        <Trash2 size={16} />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </Card>
-                                                ))}
-                                            </div>
-                                        )}
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        ))}
                                     </div>
-                                ))}
-                        </div>
-                    </div>
-                )}
+                                )}
+                            </div>
+                        ))}
+                </div>
             </div>
-        </div>
+        )
+    }
+            </div >
+        </div >
     );
 };
 
