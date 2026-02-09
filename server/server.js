@@ -257,6 +257,78 @@ app.delete('/api/names/:id', authenticateToken, (req, res) => {
     });
 });
 
+// Bulk Import (Protected)
+app.post('/api/import', authenticateToken, async (req, res) => {
+    const sections = req.body;
+
+    if (!Array.isArray(sections)) {
+        return res.status(400).json({ error: "Input must be an array of sections" });
+    }
+
+    try {
+        // We need to process sequentially to maintain order and get IDs
+        // Using a transaction would be ideal, but for now we'll do best-effort linear processing
+        // to stay compatible with our simple db wrapper.
+
+        const results = { sections: 0, items: 0, errors: [] };
+
+        for (const sectionData of sections) {
+            // 1. Create Section
+            try {
+                const sectionName = sectionData.name || "Untitled Section";
+                await new Promise((resolve, reject) => {
+                    db.run("INSERT INTO sections (name) VALUES (?)", [sectionName], function (err) {
+                        if (err) return reject(err);
+                        const sectionId = this.lastID;
+                        results.sections++;
+
+                        // 2. Create Items for this Section
+                        if (Array.isArray(sectionData.items)) {
+                            const itemPromises = sectionData.items.map(item => {
+                                return new Promise((resolveItem, rejectItem) => {
+                                    const sql = "INSERT INTO items (section_id, name, description, price, image_url, options) VALUES (?, ?, ?, ?, ?, ?)";
+                                    const params = [
+                                        sectionId,
+                                        item.name,
+                                        item.description || '',
+                                        item.price || 0,
+                                        item.image_url || '',
+                                        JSON.stringify(item.options || [])
+                                    ];
+                                    db.run(sql, params, function (err) {
+                                        if (err) return rejectItem(err);
+                                        results.items++;
+                                        resolveItem();
+                                    });
+                                });
+                            });
+
+                            Promise.all(itemPromises)
+                                .then(() => resolve())
+                                .catch(err => {
+                                    console.error("Error adding items for section " + sectionId, err);
+                                    results.errors.push(`Failed to add items for section '${sectionName}': ${err.message}`);
+                                    resolve(); // Resolve to continue with next section
+                                });
+                        } else {
+                            resolve();
+                        }
+                    });
+                });
+
+            } catch (err) {
+                console.error("Error importing section", err);
+                results.errors.push(`Failed to import section '${sectionData.name}': ${err.message}`);
+            }
+        }
+
+        res.json({ message: "Import completed", results });
+
+    } catch (e) {
+        res.status(500).json({ error: "Import failed: " + e.message });
+    }
+});
+
 // Global Error Handler (Multer & others)
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {
