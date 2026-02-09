@@ -16,24 +16,9 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "numberoneplusrayen";
 app.use(cors());
 app.use(express.json());
 
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
-}
-
-// Multer Config
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadDir)
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-        cb(null, uniqueSuffix + path.extname(file.originalname)) // Append extension
-    }
-})
-
-const upload = multer({ storage: storage })
+// Multer Config (Use Memory Storage for Vercel/Serverless)
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 // Serve Uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -149,11 +134,16 @@ app.post('/api/items', authenticateToken, upload.single('image'), (req, res) => 
     let image_url = req.body.image_url || '';
 
     if (req.file) {
-        // Construct URL for uploaded file. Assuming api is on same domain/port for now or handled by proxy.
-        // In dev: http://localhost:3000/uploads/filename
-        const protocol = req.protocol;
-        const host = req.get('host');
-        image_url = `${protocol}://${host}/uploads/${req.file.filename}`;
+        // In a real app, upload req.file.buffer to S3/Cloudinary here.
+        // For Vercel demo without S3, we can't persist the file locally.
+        // We'll use a placeholder or just keep the provided URL if any.
+        console.log("File uploaded (in memory):", req.file.originalname, req.file.size);
+
+        // Use a placeholder if no external URL provided, or maybe user sent a URL too?
+        // For now, let's set a default if it's empty
+        if (!image_url) {
+            image_url = "https://placehold.co/600x400?text=Uploaded+Image";
+        }
     }
 
     // Default image if none provided
