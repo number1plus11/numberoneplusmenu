@@ -7,8 +7,13 @@ let db;
 
 if (isPostgres) {
     const { Pool } = require('pg');
+
+    // Remove query params from connection string to avoid SSL conflicts
+    // (e.g. sslmode=require in URL can override rejectUnauthorized: false)
+    const connectionString = process.env.DATABASE_URL.split('?')[0];
+
     const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
+        connectionString: connectionString,
         ssl: { rejectUnauthorized: false } // Required for Supabase/Vercel
     });
 
