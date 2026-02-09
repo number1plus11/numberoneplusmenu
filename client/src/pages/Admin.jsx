@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getMenu, getSections, addSection, addItem, deleteItem, login, updateSection, deleteSection, updateItem, getNames, addName, updateName, deleteName } from '@/api';
+import { getMenu, getSections, addSection, addItem, deleteItem, login, updateSection, deleteSection, updateItem, getNames, addName, updateName, deleteName, importData } from '@/api';
 import { Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -288,29 +288,14 @@ const Admin = () => {
         try {
             setImportStatus('Importing...');
             const data = JSON.parse(jsonInput);
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_URL}/import`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
+            const result = await importData(data); // Use api.js function
 
-            if (response.ok) {
-                const result = await response.json();
-                setImportStatus(`Success! Imported ${result.results.sections} sections and ${result.results.items} items.`);
-                // trigger refresh if possible, or just alert
-                // fetchSections(); // Trying to call this if it exists in scope
-                window.location.reload(); // Simple brute force refresh to show new data
-                setJsonInput('');
-            } else {
-                const err = await response.json();
-                setImportStatus('Error: ' + err.error);
-            }
+            setImportStatus(`Success! Imported ${result.results.sections} sections and ${result.results.items} items.`);
+            window.location.reload();
+            setJsonInput('');
         } catch (e) {
-            setImportStatus('Invalid JSON: ' + e.message);
+            console.error(e);
+            setImportStatus('Error: ' + (e.response?.data?.error || e.message));
         }
     };
 

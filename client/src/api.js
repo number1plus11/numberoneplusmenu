@@ -86,3 +86,9 @@ export const deleteItem = async (id) => {
     const response = await api.delete(`/items/${id}`, { headers: getAuthHeader() });
     return response.data;
 };
+
+export const importData = async (data) => {
+    const headers = getAuthHeader();
+    const response = await api.post('/import', data, { headers });
+    return response.data;
+};
