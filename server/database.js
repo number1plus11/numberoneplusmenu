@@ -1,81 +1,169 @@
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// Connect to SQLite database
-const dbPath = path.resolve(__dirname, 'restaurant.db');
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Error opening database', err.message);
-    } else {
-        console.log('Connected to the SQLite database.');
-    }
-});
+// Check if we are running with a DATABASE_URL (Supabase/Postgres)
+const isPostgres = !!process.env.DATABASE_URL;
 
-// Initialize Database Tables
-db.serialize(() => {
-    // Sections Table (e.g., Fast Food, Plats, Boissons)
-    db.run(`CREATE TABLE IF NOT EXISTS sections (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        display_order INTEGER DEFAULT 0
-    )`);
+let db;
 
-    // Items Table
-    db.run(`CREATE TABLE IF NOT EXISTS items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        section_id INTEGER,
-        name TEXT NOT NULL,
-        description TEXT,
-        price REAL,
-        available BOOLEAN DEFAULT 1,
-        image_url TEXT,
-        options TEXT,
-        FOREIGN KEY (section_id) REFERENCES sections(id)
-    )`, (err) => {
-        // Migration: Attempt to add options column if it doesn't exist (for existing DBs)
-        if (!err) {
-            db.run("ALTER TABLE items ADD COLUMN options TEXT", (err) => {
-                // Ignore error if column already exists
-            });
-        }
+if (isPostgres) {
+    const { Pool } = require('pg');
+    const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false } // Required for Supabase/Vercel
     });
 
-    // Standard Names Table (for standardized item names)
-    db.run(`CREATE TABLE IF NOT EXISTS standard_names (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE
-    )`, (err) => {
-        if (!err) {
-            // Seed from existing items if empty
-            db.get("SELECT count(*) as count FROM standard_names", (err, row) => {
-                if (row && row.count === 0) {
-                    console.log("Seeding standard_names from existing items...");
-                    db.all("SELECT DISTINCT name FROM items", [], (err, rows) => {
-                        if (!err && rows.length > 0) {
-                            const stmt = db.prepare("INSERT OR IGNORE INTO standard_names (name) VALUES (?)");
-                            rows.forEach(r => stmt.run(r.name));
-                            stmt.finalize();
-                        }
-                    });
+    console.log("Connected to PostgreSQL (Supabase)");
+
+    // Wrapper to mimic SQLite3 API for existing code compatibility
+    db = {
+        run: function (sql, params = [], callback) {
+            // Adjust SQL for Postgres: ? -> $1, $2, etc.
+            let paramCount = 1;
+            const pgSql = sql.replace(/\?/g, () => `$${paramCount++}`);
+
+            // Handle specific SQL syntax differences
+            // 1. AUTOINCREMENT -> GENERATED ALWAYS AS IDENTITY (Handled in CREATE TABLE below)
+            // 2. INSERT ... returning id (SQLite uses this.lastID context)
+            const isInsert = /^\s*INSERT/i.test(pgSql);
+            const finalSql = isInsert ? `${pgSql} RETURNING id` : pgSql;
+
+            pool.query(finalSql, params)
+                .then(res => {
+                    const context = {
+                        lastID: isInsert && res.rows.length > 0 ? res.rows[0].id : null,
+                        changes: res.rowCount
+                    };
+                    if (callback) callback.call(context, null);
+                })
+                .catch(err => {
+                    if (callback) callback(err);
+                });
+        },
+        all: function (sql, params = [], callback) {
+            let paramCount = 1;
+            const pgSql = sql.replace(/\?/g, () => `$${paramCount++}`);
+            pool.query(pgSql, params)
+                .then(res => {
+                    if (callback) callback(null, res.rows);
+                })
+                .catch(err => {
+                    if (callback) callback(err);
+                });
+        },
+        get: function (sql, params = [], callback) {
+            let paramCount = 1;
+            const pgSql = sql.replace(/\?/g, () => `$${paramCount++}`);
+            pool.query(pgSql, params)
+                .then(res => {
+                    if (callback) callback(null, res.rows[0]);
+                })
+                .catch(err => {
+                    if (callback) callback(err);
+                });
+        },
+        serialize: function (callback) {
+            if (callback) callback();
+        }
+    };
+
+    // Initialize Postgres Tables
+    const initPostgres = async () => {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // Sections Table
+            await client.query(`CREATE TABLE IF NOT EXISTS sections (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL,
+                display_order INTEGER DEFAULT 0
+            )`);
+
+            // Items Table
+            await client.query(`CREATE TABLE IF NOT EXISTS items (
+                id SERIAL PRIMARY KEY,
+                section_id INTEGER REFERENCES sections(id),
+                name TEXT NOT NULL,
+                description TEXT,
+                price REAL,
+                available BOOLEAN DEFAULT true,
+                image_url TEXT,
+                options TEXT
+            )`);
+
+            // Standard Names
+            await client.query(`CREATE TABLE IF NOT EXISTS standard_names (
+                id SERIAL PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE
+            )`);
+
+            // Seed Initial Data if empty
+            const res = await client.query('SELECT count(*) FROM sections');
+            if (parseInt(res.rows[0].count) === 0) {
+                console.log("Seeding initial data...");
+                const sections = ["Fast Food", "Plats Gourmands", "Desserts", "Boissons"];
+                for (let i = 0; i < sections.length; i++) {
+                    await client.query('INSERT INTO sections (name, display_order) VALUES ($1, $2)', [sections[i], i]);
                 }
-            });
+            }
+
+            await client.query('COMMIT');
+        } catch (e) {
+            await client.query('ROLLBACK');
+            console.error("Error initializing database:", e);
+        } finally {
+            client.release();
         }
+    };
+
+    initPostgres();
+
+} else {
+    // FALLBACK TO SQLITE (Local Development)
+    const sqlite3 = require('sqlite3').verbose();
+    const dbPath = path.resolve(__dirname, 'restaurant.db');
+    db = new sqlite3.Database(dbPath, (err) => {
+        if (err) console.error('Error opening database', err.message);
+        else console.log('Connected to the SQLite database.');
     });
 
-    // Seed some initial data if empty
-    db.get("SELECT count(*) as count FROM sections", (err, row) => {
-        if (row.count === 0) {
-            console.log("Seeding initial data...");
-            const sections = [
-                "Fast Food", "Plats Gourmands", "Desserts", "Boissons"
-            ];
-            const stmt = db.prepare("INSERT INTO sections (name, display_order) VALUES (?, ?)");
-            sections.forEach((sec, index) => {
-                stmt.run(sec, index);
-            });
-            stmt.finalize();
-        }
+    db.serialize(() => {
+        db.run(`CREATE TABLE IF NOT EXISTS sections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            display_order INTEGER DEFAULT 0
+        )`);
+
+        db.run(`CREATE TABLE IF NOT EXISTS items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            section_id INTEGER,
+            name TEXT NOT NULL,
+            description TEXT,
+            price REAL,
+            available BOOLEAN DEFAULT 1,
+            image_url TEXT,
+            options TEXT,
+            FOREIGN KEY (section_id) REFERENCES sections(id)
+        )`);
+
+        // Ensure options column exists
+        db.run("ALTER TABLE items ADD COLUMN options TEXT", (err) => { });
+
+        db.run(`CREATE TABLE IF NOT EXISTS standard_names (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+        )`);
+
+        db.get("SELECT count(*) as count FROM sections", (err, row) => {
+            if (row && row.count === 0) {
+                const sections = ["Fast Food", "Plats Gourmands", "Desserts", "Boissons"];
+                const stmt = db.prepare("INSERT INTO sections (name, display_order) VALUES (?, ?)");
+                sections.forEach((sec, index) => stmt.run(sec, index));
+                stmt.finalize();
+            }
+        });
     });
-});
+}
 
 module.exports = db;
+

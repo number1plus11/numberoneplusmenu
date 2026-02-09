@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const db = require('./database');
@@ -42,6 +43,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Login Endpoint
 app.post('/api/login', (req, res) => {
     const { password } = req.body;
+    console.log("Login attempt. Received password length:", password ? password.length : 'null');
+    console.log("Expected ADMIN_PASSWORD length:", ADMIN_PASSWORD.length);
+
     if (password === ADMIN_PASSWORD) {
         const token = jwt.sign({ role: 'admin' }, SECRET_KEY, { expiresIn: '2h' });
         res.json({ token });
