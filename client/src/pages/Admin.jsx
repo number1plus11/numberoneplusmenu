@@ -23,6 +23,11 @@ const Admin = () => {
     const [activeTab, setActiveTab] = useState('items');
     const [filterSectionId, setFilterSectionId] = useState('all');
 
+    // Bulk Import State
+    const [isImporting, setIsImporting] = useState(false);
+    const [jsonInput, setJsonInput] = useState('');
+    const [importStatus, setImportStatus] = useState('');
+
     // New Item Form State
     const [newItem, setNewItem] = useState({
         section_id: '',
@@ -279,6 +284,36 @@ const Admin = () => {
         });
     };
 
+    const handleImport = async () => {
+        try {
+            setImportStatus('Importing...');
+            const data = JSON.parse(jsonInput);
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_URL}/import`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                setImportStatus(`Success! Imported ${result.results.sections} sections and ${result.results.items} items.`);
+                // trigger refresh if possible, or just alert
+                // fetchSections(); // Trying to call this if it exists in scope
+                window.location.reload(); // Simple brute force refresh to show new data
+                setJsonInput('');
+            } else {
+                const err = await response.json();
+                setImportStatus('Error: ' + err.error);
+            }
+        } catch (e) {
+            setImportStatus('Invalid JSON: ' + e.message);
+        }
+    };
+
     if (!token) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
@@ -310,40 +345,6 @@ const Admin = () => {
     }
 
 
-    // Bulk Import State
-    const [isImporting, setIsImporting] = useState(false);
-    const [jsonInput, setJsonInput] = useState('');
-    const [importStatus, setImportStatus] = useState('');
-
-    const handleImport = async () => {
-        try {
-            setImportStatus('Importing...');
-            const data = JSON.parse(jsonInput);
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_URL}/import`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                setImportStatus(`Success! Imported ${result.results.sections} sections and ${result.results.item} items.`);
-                // trigger refresh if possible, or just alert
-                // fetchSections(); // Trying to call this if it exists in scope
-                window.location.reload(); // Simple brute force refresh to show new data
-                setJsonInput('');
-            } else {
-                const err = await response.json();
-                setImportStatus('Error: ' + err.error);
-            }
-        } catch (e) {
-            setImportStatus('Invalid JSON: ' + e.message);
-        }
-    };
 
     return (
         <div className="min-h-screen bg-slate-50 p-6">
