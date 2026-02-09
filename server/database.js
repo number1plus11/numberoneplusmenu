@@ -20,11 +20,10 @@ if (isPostgres) {
     console.log("Connected to PostgreSQL (Supabase)");
 
     // Initialize Postgres Tables
+    // Initialize Postgres Tables
     const initPostgres = async () => {
         const client = await pool.connect();
         try {
-            await client.query('BEGIN');
-
             // Sections Table
             await client.query(`CREATE TABLE IF NOT EXISTS sections (
                 id SERIAL PRIMARY KEY,
@@ -60,10 +59,8 @@ if (isPostgres) {
                 }
             }
 
-            await client.query('COMMIT');
             console.log("Database initialized successfully.");
         } catch (e) {
-            await client.query('ROLLBACK');
             console.error("Error initializing database:", e);
         } finally {
             client.release();
