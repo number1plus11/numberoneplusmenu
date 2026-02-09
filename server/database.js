@@ -19,61 +19,6 @@ if (isPostgres) {
 
     console.log("Connected to PostgreSQL (Supabase)");
 
-    // Wrapper to mimic SQLite3 API for existing code compatibility
-    db = {
-        run: function (sql, params = [], callback) {
-            // Adjust SQL for Postgres: ? -> $1, $2, etc.
-            let paramCount = 1;
-            const pgSql = sql.replace(/\?/g, () => `$${paramCount++}`);
-
-            // Handle specific SQL syntax differences
-            // 1. AUTOINCREMENT -> GENERATED ALWAYS AS IDENTITY (Handled in CREATE TABLE below)
-            // 2. INSERT ... returning id (SQLite uses this.lastID context)
-            const isInsert = /^\s*INSERT/i.test(pgSql);
-            const finalSql = isInsert ? `${pgSql} RETURNING id` : pgSql;
-
-            console.log("Executing SQL:", finalSql, params); // Debug Log
-
-            pool.query(finalSql, params)
-                .then(res => {
-                    const context = {
-                        lastID: isInsert && res.rows.length > 0 ? res.rows[0].id : null,
-                        changes: res.rowCount
-                    };
-                    if (callback) callback.call(context, null);
-                })
-                .catch(err => {
-                    console.error("SQL Error:", err); // Debug Log
-                    if (callback) callback(err);
-                });
-        },
-        all: function (sql, params = [], callback) {
-            let paramCount = 1;
-            const pgSql = sql.replace(/\?/g, () => `$${paramCount++}`);
-            pool.query(pgSql, params)
-                .then(res => {
-                    if (callback) callback(null, res.rows);
-                })
-                .catch(err => {
-                    if (callback) callback(err);
-                });
-        },
-        get: function (sql, params = [], callback) {
-            let paramCount = 1;
-            const pgSql = sql.replace(/\?/g, () => `$${paramCount++}`);
-            pool.query(pgSql, params)
-                .then(res => {
-                    if (callback) callback(null, res.rows[0]);
-                })
-                .catch(err => {
-                    if (callback) callback(err);
-                });
-        },
-        serialize: function (callback) {
-            if (callback) callback();
-        }
-    };
-
     // Initialize Postgres Tables
     const initPostgres = async () => {
         const client = await pool.connect();
@@ -116,6 +61,7 @@ if (isPostgres) {
             }
 
             await client.query('COMMIT');
+            console.log("Database initialized successfully.");
         } catch (e) {
             await client.query('ROLLBACK');
             console.error("Error initializing database:", e);
@@ -124,7 +70,71 @@ if (isPostgres) {
         }
     };
 
-    initPostgres();
+    // Promise that resolves when DB is ready
+    const dbReady = initPostgres();
+
+    // Wrapper to mimic SQLite3 API for existing code compatibility
+    db = {
+        run: function (sql, params = [], callback) {
+            dbReady.then(() => {
+                // Adjust SQL for Postgres: ? -> $1, $2, etc.
+                let paramCount = 1;
+                const pgSql = sql.replace(/\?/g, () => `$${paramCount++}`);
+
+                // Handle specific SQL syntax differences
+                // 1. AUTOINCREMENT -> GENERATED ALWAYS AS IDENTITY (Handled in CREATE TABLE below)
+                // 2. INSERT ... returning id (SQLite uses this.lastID context)
+                const isInsert = /^\s*INSERT/i.test(pgSql);
+                const finalSql = isInsert ? `${pgSql} RETURNING id` : pgSql;
+
+                console.log("Executing SQL:", finalSql, params); // Debug Log
+
+                pool.query(finalSql, params)
+                    .then(res => {
+                        const context = {
+                            lastID: isInsert && res.rows.length > 0 ? res.rows[0].id : null,
+                            changes: res.rowCount
+                        };
+                        if (callback) callback.call(context, null);
+                    })
+                    .catch(err => {
+                        console.error("SQL Error:", err); // Debug Log
+                        if (callback) callback(err);
+                    });
+            });
+        },
+        all: function (sql, params = [], callback) {
+            dbReady.then(() => {
+                let paramCount = 1;
+                const pgSql = sql.replace(/\?/g, () => `$${paramCount++}`);
+                pool.query(pgSql, params)
+                    .then(res => {
+                        if (callback) callback(null, res.rows);
+                    })
+                    .catch(err => {
+                        if (callback) callback(err);
+                    });
+            });
+        },
+        get: function (sql, params = [], callback) {
+            dbReady.then(() => {
+                let paramCount = 1;
+                const pgSql = sql.replace(/\?/g, () => `$${paramCount++}`);
+                pool.query(pgSql, params)
+                    .then(res => {
+                        if (callback) callback(null, res.rows[0]);
+                    })
+                    .catch(err => {
+                        if (callback) callback(err);
+                    });
+            });
+        },
+        serialize: function (callback) {
+            dbReady.then(() => {
+                if (callback) callback();
+            });
+        }
+    };
 
 } else {
     // FALLBACK TO SQLITE (Local Development)
