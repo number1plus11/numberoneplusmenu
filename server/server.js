@@ -302,6 +302,21 @@ app.get('/api/debug/init-db', async (req, res) => {
     }
 });
 
+// DB Status Check (for debugging 500 errors)
+app.get('/api/debug/status', (req, res) => {
+    db.get("SELECT count(*) as count FROM sections", [], (err, row) => {
+        if (err) {
+            return res.json({
+                status: "error",
+                message: err.message,
+                code: err.code || 'unknown',
+                details: err
+            });
+        }
+        res.json({ status: "ok", count: row.count, message: "Database is connected and tables exist!" });
+    });
+});
+
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`Server running on http://localhost:${PORT}`);
