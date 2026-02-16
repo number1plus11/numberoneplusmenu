@@ -97,7 +97,7 @@ const Menu = () => {
             {/* Hero Section */}
             <header className="bg-orange-600 py-12 text-white shadow-lg">
                 <div className="container mx-auto px-4 text-center">
-                    <img src="/number_one_plus.svg" alt="NumberOne Plus" className="h-16 md:h-24 mx-auto mb-4" />
+                    <img src="/number_one_plus.svg" alt="NumberOne Plus" className="h-24 md:h-32 mx-auto mb-4" />
                     <p className="text-lg text-orange-100 opacity-90">Experience the taste of excellence.</p>
 
                     {/* Search Bar within Header */}
