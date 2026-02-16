@@ -32,7 +32,7 @@ app.post('/api/login', (req, res) => {
     console.log("Expected ADMIN_PASSWORD length:", ADMIN_PASSWORD.length);
 
     if (password === ADMIN_PASSWORD) {
-        const token = jwt.sign({ role: 'admin' }, SECRET_KEY, { expiresIn: '2h' });
+        const token = jwt.sign({ role: 'admin' }, SECRET_KEY, { expiresIn: '720h' });
         res.json({ token });
     } else {
         res.status(401).json({ error: "Invalid password" });
